@@ -30,13 +30,7 @@ def process_data():
 def save_data():
     print("Salvando dados...")
 
-@app.task
-def run_curso_workflow():
-    fetch_cursos().delay()
-    process_data().delay()
-    save_data().delay()
 
-@worker_ready.connect
-def at_start(sender, **kwargs):
-    # Automatically trigger the workflow when the worker is ready
-    run_curso_workflow.delay()
+# @worker_ready.connect
+# def at_start(sender, **kwargs):
+#     run_
