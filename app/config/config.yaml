@@ -1,0 +1,11 @@
+development:
+  auth_url: "https://pre.ufcg.edu.br:8443/as_scao/as/tokens"
+  base_url: "https://eureca.sti.ufcg.edu.br/das"
+  username: !ENV ${USERNAME}
+  password: !ENV ${PASSWORD}
+
+production:
+  auth_url: "https://pre.ufcg.edu.br:8443/as_scao"
+  base_url: "https://eureca.sti.ufcg.edu.br/das"
+  username: !ENV ${USERNAME}
+  password: !ENV ${PASSWORD}
