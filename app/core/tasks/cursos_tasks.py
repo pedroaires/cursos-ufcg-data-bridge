@@ -1,7 +1,6 @@
 from core.celery_app import app
 from core.api import APIClient
 from core.config import settings
-from celery.signals import worker_ready
 
 api_client = APIClient(
     auth_url=settings.auth_url,
@@ -26,8 +25,3 @@ def process_data(previous_task_result=None):
 @app.task
 def save_data(previous_task_result=None):
     print("Salvando dados...")
-
-
-# @worker_ready.connect
-# def at_start(sender, **kwargs):
-#     run_

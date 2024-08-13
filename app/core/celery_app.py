@@ -1,8 +1,7 @@
 from celery import Celery
-from core.config import settings
 
 app = Celery('tasks')
-app.config_from_object('celery_config')
+app.config_from_object('config.celery_config')
 
 import core.tasks.cursos_tasks
 import core.tasks.alunos_tasks

@@ -8,8 +8,10 @@ accept_content = ["json"]
 timezone = "America/Sao_Paulo"
 enable_utc = True
 
-task_routes = {
-    'core.tasks.cursos_task.py': 'cursos-queue',
-}
-
 result_expires = 3600
+
+redis_cache = {
+    'host': 'localhost',
+    'port': 6380,
+    'db': 0,
+}
