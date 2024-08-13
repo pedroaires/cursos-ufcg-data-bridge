@@ -1,10 +1,7 @@
-from celery import Celery
+from core.celery_app import app
 from core.api import APIClient
 from core.config import settings
 from celery.signals import worker_ready
-
-app = Celery('tasks')
-app.config_from_object('celery_config')
 
 api_client = APIClient(
     auth_url=settings.auth_url,
@@ -23,20 +20,14 @@ def fetch_cursos():
     print(f"Password: {api_client.password}")
 
 @app.task
-def process_data():
+def process_data(previous_task_result=None):
     print("Processando dados...")
 
 @app.task
-def save_data():
+def save_data(previous_task_result=None):
     print("Salvando dados...")
 
-@app.task
-def run_curso_workflow():
-    fetch_cursos().delay()
-    process_data().delay()
-    save_data().delay()
 
-@worker_ready.connect
-def at_start(sender, **kwargs):
-    # Automatically trigger the workflow when the worker is ready
-    run_curso_workflow.delay()
+# @worker_ready.connect
+# def at_start(sender, **kwargs):
+#     run_
