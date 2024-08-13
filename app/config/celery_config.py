@@ -10,7 +10,7 @@ enable_utc = True
 
 result_expires = 3600
 
-redis_cache = {
+redis_cache_config = {
     'host': 'localhost',
     'port': 6380,
     'db': 0,
