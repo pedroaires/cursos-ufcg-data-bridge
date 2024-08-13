@@ -1,9 +1,6 @@
-from celery import Celery
+from core.celery_app import app
 from core.api import APIClient
 from core.config import settings
-
-app = Celery('tasks')
-app.config_from_object('celery_config')
 
 api_client = APIClient(
     auth_url=settings.auth_url,
@@ -13,13 +10,13 @@ api_client = APIClient(
 )
 
 @app.task
-def fetch_curriculos():
+def fetch_curriculos(previous_task_result=None):
     print("Buscando dados de CURRICULOS...")
 
 @app.task
-def process_data():
+def process_data(previous_task_result=None):
     print("Processando dados de CURRICULOS...")
 
 @app.task
-def save_data():
+def save_data(previous_task_result=None):
     print("Salvando dados de CURRICULOS...")
