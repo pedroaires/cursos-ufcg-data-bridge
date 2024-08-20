@@ -2,6 +2,9 @@ from core.celery_app import app
 from core.api import APIClient
 from core.config import settings
 from core.redis_cache import RedisCache
+from core.get_db import get_db
+from core.models.curso import Curso
+
 import os
 import pandas as pd
 import unidecode
@@ -27,7 +30,6 @@ def fetch_cursos():
 @app.task
 def process_data(cursos_json=None):
     print("Processando dados...")
-    print(os.getcwd())
     campus_info = pd.read_csv('./data/campus_info.csv')
     
     # Format the JSON data
@@ -39,14 +41,19 @@ def process_data(cursos_json=None):
 
 @app.task
 def save_data(previous_task_result=None):
+    print("Salvando dados de CURSOS")
     cursos_json = redis_cache.get_data("cursos")
     if not cursos_json:
         raise Exception("Cursos não encontrados no cache")
     
     cursos = json.loads(cursos_json)
-    cursos_df = pd.DataFrame(cursos)
-    cursos_df.to_csv('./data/cursos_info.csv', index=False)
-    print("Salvando dados...")
+    with get_db() as db:
+        try:
+            db.bulk_insert_mappings(Curso, cursos)
+            db.commit()
+        except:
+            db.rollback()
+            raise(Exception("Erro ao salvar dados de cursos no banco de dados"))
 
 
 def formata_schema_curso(nome_curso, campus_abrev):

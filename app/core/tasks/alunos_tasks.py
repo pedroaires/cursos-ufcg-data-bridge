@@ -2,6 +2,8 @@ from core.celery_app import app
 from core.api import APIClient
 from core.config import settings
 from core.redis_cache import RedisCache
+from core.get_db import get_db
+from core.models.aluno import Aluno
 import json
 import pandas as pd
 api_client = APIClient(
@@ -69,23 +71,25 @@ def process_data(previous_task_result=None):
             if old_key in aluno:
                 aluno[new_key] = aluno.pop(old_key)
         
-        # Remove columns not in alunos_traducao_colunas.values() and 'codigo_curso'
         keys_to_remove = set(aluno.keys()) - set(alunos_traducao_colunas.values()) - {'codigo_curso'}
         for key in keys_to_remove:
-            aluno.pop(key, None)
-        
-        aluno['id_aluno'] = i 
+            aluno.pop(key, None) 
 
     redis_cache.set_data("alunos", json.dumps(alunos_data))
     
 
 @app.task
 def save_data(previous_task_result=None):
+    print("Salvando dados de ALUNOS")
     alunos_data_json = redis_cache.get_data("alunos")
     if not alunos_data_json:
         raise Exception("Dados de ALUNOS não encontrados no cache")
 
     alunos_data = json.loads(alunos_data_json)
-    alunos_df = pd.DataFrame(alunos_data)
-    alunos_df.to_csv('./data/alunos.csv', index=False)
-    print("Salvando dados de ALUNOS...")
+    with get_db() as db:
+        try:
+            db.bulk_insert_mappings(Aluno, alunos_data)
+            db.commit()
+        except:
+            db.rollback()
+            raise(Exception("Erro ao salvar dados de alunos no banco de dados"))
