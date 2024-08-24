@@ -1,0 +1,23 @@
+# Nomes do campo da API mapeados para o nome do campo do banco de dados
+# Mesmo as colunas que nao necessitam ser mapeadas precisam estar presentes no arquivo,
+# pois as que nao estiverem serao removidas, entao se nao quiser mapear uma coluna, apenas coloque o mesmo nome no mapeamento
+cursos:
+  code: codigo_curso
+  name: nome_comum
+  disponivel: disponivel
+  schema: schema
+  campus: campus
+
+
+alunos:
+  statusTerm: periodo_situacao
+  admissionTerm: periodo_ingressao
+  admissionCode: codigo_ingressao
+  status: situacao
+  inactivityReason: motivo_inatividade
+  placeOfBirth: estado
+  secondarySchoolType: tipo_ensino
+  affirmativePolicy: modalidade_concorrencia
+  age: idade
+  gender: genero
+
