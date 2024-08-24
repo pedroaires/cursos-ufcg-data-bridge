@@ -1,6 +1,6 @@
 # Nomes do campo da API mapeados para o nome do campo do banco de dados
-# Mesmo as colunas que nao necessitam ser mapeadas precisam estar presentes no arquivo,
-# pois as que nao estiverem serao removidas, entao se nao quiser mapear uma coluna, apenas coloque o mesmo nome no mapeamento
+# Mesmo as colunas que nao necessitam ser mapeadas precisam estar presentes no arquivo
+# pois as que nao estiverem serao removidas entao se nao quiser mapear uma coluna apenas coloque o mesmo nome no mapeamento
 cursos:
   code: codigo_curso
   name: nome_comum
@@ -20,4 +20,17 @@ alunos:
   affirmativePolicy: modalidade_concorrencia
   age: idade
   gender: genero
+  codigo_curso: codigo_curso
+
+curriculos:
+  courseCode: codigo_curso
+  curriculumCode: codigo_curriculo
+  minNumberOfTerms: min_periodos
+  maxNumberOfTerms: max_periodos
+  minNumberOfEnrolledCredits: min_creditos_matriculados
+  maxNumberOfEnrolledCredits: max_creditos_matriculados
+  minMandatoryCreditsNeeded: min_creditos_obrigatorios
+  minOptionalCreditsNeeded: min_creditos_optativos
+  minComplementaryCreditsNeeded: min_creditos_complementares
+  minAcademicsExtensionActivities: min_atividades_extensao
 

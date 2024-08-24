@@ -7,7 +7,7 @@ from core.models.aluno import Aluno
 from core.utils import rename_columns, remove_extra_keys
 
 import json
-import pandas as pd
+
 api_client = APIClient(
     auth_url=settings.auth_url,
     base_url=settings.base_url,
@@ -26,7 +26,7 @@ def fetch_alunos(previous_task_result=None):
     cursos = json.loads(cursos_json)
     alunos_data = []
 
-    for curso in cursos:
+    for curso in cursos[:10]:
         if curso['disponivel']:
             params = {
                 'courseCode': curso['codigo_curso'],
@@ -55,11 +55,12 @@ def process_data(previous_task_result=None):
 
     aluno_mappings = load_column_mappings()['alunos']
     
+    formatted_alunos = []
     for aluno in alunos_data:
         formatted_aluno = rename_columns(aluno, aluno_mappings)
         formatted_aluno = remove_extra_keys(formatted_aluno, aluno_mappings)
-
-    redis_cache.set_data("alunos", json.dumps(alunos_data))
+        formatted_alunos.append(formatted_aluno)
+    redis_cache.set_data("alunos", json.dumps(formatted_alunos))
     
 
 @app.task
