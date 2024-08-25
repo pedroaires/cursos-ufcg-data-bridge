@@ -8,7 +8,6 @@ cursos:
   schema: schema
   campus: campus
 
-
 alunos:
   statusTerm: periodo_situacao
   admissionTerm: periodo_ingressao
@@ -34,3 +33,12 @@ curriculos:
   minComplementaryCreditsNeeded: min_creditos_complementares
   minAcademicsExtensionActivities: min_atividades_extensao
 
+disciplinas:
+  subjectCode: codigo_disciplina
+  name: disciplina
+  credits: creditos
+  hours: horas
+  type: tipo 
+  idealSemester: semestre
+  curriculumCode: codigo_curriculo
+  courseCode: codigo_curso

@@ -3,6 +3,7 @@ from config.db_config import reset_database
 import core.tasks.cursos_tasks as cursos
 import core.tasks.curriculos_tasks as curriculos
 import core.tasks.alunos_tasks as alunos
+import core.tasks.disciplinas_tasks as disciplinas
 
 import logging
 
@@ -30,9 +31,14 @@ def orchestrate_tasks():
         alunos.process_data.s(),
         curriculos.process_data.s(),
         
+        disciplinas.fetch_disciplinas.s(),
+        disciplinas.process_data.s(),
+
+        
         cursos.save_data.s(),
         alunos.save_data.s(),
-        curriculos.save_data.s()
+        curriculos.save_data.s(),
+        disciplinas.save_data.s()
         
     )
     print("Iniciando workflow...")
