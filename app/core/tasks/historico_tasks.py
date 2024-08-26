@@ -5,7 +5,7 @@ from core.redis_cache import RedisCache
 from core.get_db import get_db
 from core.models.historico import Historico
 from core.models.disciplina import Disciplina
-from core.utils import rename_columns, remove_extra_keys
+from core.utils import rename_columns, remove_extra_keys, generate_disciplina_id
 
 import json
 
@@ -62,22 +62,6 @@ def process_data(previous_task_result=None):
         formatted_historicos.append(formatted_historico)
     redis_cache.set_data("historico", json.dumps(formatted_historicos), expire=None)
 
-# @app.task
-# def save_data(previous_task_result=None):
-#     historico_data_json = redis_cache.get_data("historico")
-#     if not historico_data_json:
-#         raise Exception("Dados de HISTORICO não encontrados no cache")
-    
-#     historico_data = json.loads(historico_data_json)
-
-#     with get_db() as db:
-#         try:
-#             db.bulk_insert_mappings(Historico, historico_data)
-#             db.commit()
-#         except Exception as e:
-#             print(e)
-#             db.rollback()
-#             raise e
 
 @app.task
 def save_data(previous_task_result=None):
@@ -89,35 +73,43 @@ def save_data(previous_task_result=None):
     historico_data = json.loads(historico_data_json)
     
     with get_db() as db:
-        valid_historico_data, invalid_historico_data = validate_historico_data(db, historico_data)
+        valid_historico_data, invalid_historico_data = validate_historico_data( historico_data)
         
         if valid_historico_data:
             insert_valid_data(db, valid_historico_data)
         
         log_invalid_data(invalid_historico_data)
 
-# Helper function to validate historico data
-def validate_historico_data(db, historico_data):
+def build_disc_lookup():
+    disciplinas_json = redis_cache.get_data("disciplinas")
+    if not disciplinas_json:
+        raise Exception("Dados de DISCIPLINAS n'ao encontrados no cache")
+    disciplinas_data = json.loads(disciplinas_json)
+    disciplinas_lookup = {
+            disc["id"]: disc
+        for disc in disciplinas_data
+    }
+    return disciplinas_lookup
+
+def validate_historico_data(historico_data):
+    disc_lookup = build_disc_lookup()
     valid_historico_data = []
     invalid_historico_data = []
     
     for historico in historico_data:
-        if is_valid_foreign_key(db, historico):
+        cod_disc = historico['codigo_disciplina']
+        cod_curr = historico['codigo_curriculo']
+        cod_curso = historico['codigo_curso']
+        disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
+        if disc_id in disc_lookup:
             valid_historico_data.append(historico)
         else:
             invalid_historico_data.append(historico)
     
     return valid_historico_data, invalid_historico_data
+    
 
-# Helper function to check foreign key validity
-def is_valid_foreign_key(db, historico):
-    return db.query(Disciplina).filter_by(
-        codigo_curriculo=historico.get('codigo_curriculo'),
-        codigo_curso=historico.get('codigo_curso'),
-        codigo_disciplina=historico.get('codigo_disciplina')
-    ).first() is not None
 
-# Helper function to insert valid data
 def insert_valid_data(db, valid_historico_data):
     try:
         db.bulk_insert_mappings(Historico, valid_historico_data)
@@ -128,8 +120,7 @@ def insert_valid_data(db, valid_historico_data):
         print(f"Erro ao inserir dados: {e}")
         raise e
 
-# Helper function to log invalid data
+
 def log_invalid_data(invalid_historico_data):
     if invalid_historico_data:
-        for invalid_data in invalid_historico_data:
-            print(f"Dados inválidos: {invalid_data}")
+        print(f"Dados inválidos: {invalid_historico_data[:10]}")

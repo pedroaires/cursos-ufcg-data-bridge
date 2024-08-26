@@ -1,9 +1,18 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Integer, ForeignKey, ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint, Table
+from sqlalchemy.orm import relationship
 from config.db_config import Base
+
+# Junction table for self-referencing many-to-many relationship
+prerequisitos = Table(
+    'prerequisitos', Base.metadata,
+    Column('disciplina_id', String(100), ForeignKey('disciplinas.id')),
+    Column('prerequisito_id', String(100), ForeignKey('disciplinas.id'))
+)
 
 class Disciplina(Base):
     __tablename__ = "disciplinas"
-    codigo_disciplina = Column(String(7), primary_key=True, index=True)
+    id = Column(String(100), primary_key=True, index=True)
+    codigo_disciplina = Column(String(7), index=True)
     disciplina = Column(String(100), index=True)
     creditos = Column(Integer, index=True)
     horas = Column(Integer, index=True)
@@ -12,8 +21,14 @@ class Disciplina(Base):
     codigo_curriculo = Column(String(4), index=True)
     codigo_curso = Column(String(8), index=True)
 
+    prerequisitos = relationship(
+        "Disciplina",
+        secondary=prerequisitos,
+        primaryjoin=id==prerequisitos.c.disciplina_id,
+        secondaryjoin=id==prerequisitos.c.prerequisito_id,
+        backref="dependentes"
+    )
     __table_args__ = (
-        PrimaryKeyConstraint('codigo_disciplina', 'codigo_curriculo', 'codigo_curso'),
         ForeignKeyConstraint(
             ['codigo_curriculo', 'codigo_curso'],
             ['curriculos.codigo_curriculo', 'curriculos.codigo_curso']

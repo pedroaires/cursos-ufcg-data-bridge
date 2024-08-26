@@ -8,5 +8,6 @@ import core.tasks.alunos_tasks
 import core.tasks.curriculos_tasks
 import core.tasks.disciplinas_tasks
 import core.tasks.historico_tasks
+import core.tasks.prerequisito_tasks
 
 app.autodiscover_tasks(['core.tasks'])

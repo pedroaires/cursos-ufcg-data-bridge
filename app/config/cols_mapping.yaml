@@ -34,6 +34,7 @@ curriculos:
   minAcademicsExtensionActivities: min_atividades_extensao
 
 disciplinas:
+  id: id
   subjectCode: codigo_disciplina
   name: disciplina
   credits: creditos
@@ -51,3 +52,9 @@ historico:
   registration: matricula_fake
   codigo_curso: codigo_curso
   codigo_curriculo: codigo_curriculo
+
+prerequisitos:
+  PRD_DIC_CCU_CUR_COD_CURSO: codigo_curso
+  PRD_DIC_CCU_COD_CURRICULO: codigo_curriculo
+  PRD_DIC_DIS_DISCIPLINA: codigo_disciplina
+  PRD_CONDICAO: codigo_prerequisito

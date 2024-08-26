@@ -51,8 +51,12 @@ def process_data(previous_task_result=None):
     for disciplina in disciplinas_data:
         formatted_disciplina = rename_columns(disciplina, disciplina_mappings)
         formatted_disciplina = remove_extra_keys(formatted_disciplina, disciplina_mappings)
+        formatted_disciplina['id'] = generate_disc_id(formatted_disciplina['codigo_curso'], formatted_disciplina['codigo_curriculo'], formatted_disciplina['codigo_disciplina'])
         formatted_disciplinas.append(formatted_disciplina)
     redis_cache.set_data("disciplinas", json.dumps(formatted_disciplinas), expire=None)
+
+def generate_disc_id(cod_curso, cod_curr, cod_disc):
+    return f"{cod_curso}-{cod_curr}-{cod_disc}"
 
 @app.task
 def save_data(previoes_task_result=None):
