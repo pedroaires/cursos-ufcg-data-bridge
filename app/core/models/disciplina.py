@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, ForeignKey, ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint
 from config.db_config import Base
 
 class Disciplina(Base):
@@ -9,8 +9,17 @@ class Disciplina(Base):
     horas = Column(Integer, index=True)
     tipo = Column(String(50), index=True)
     semestre = Column(Integer, index=True)
-    codigo_curriculo = Column(String(4), index=True, primary_key=True)
-    codigo_curso = Column(String(8), ForeignKey('cursos.codigo_curso'), primary_key=True, index=True)
+    codigo_curriculo = Column(String(4), index=True)
+    codigo_curso = Column(String(8), index=True)
+
+    __table_args__ = (
+        PrimaryKeyConstraint('codigo_disciplina', 'codigo_curriculo', 'codigo_curso'),
+        ForeignKeyConstraint(
+            ['codigo_curriculo', 'codigo_curso'],
+            ['curriculos.codigo_curriculo', 'curriculos.codigo_curso']
+        ),
+        UniqueConstraint('codigo_curriculo', 'codigo_curso', 'codigo_disciplina', name='uix_disciplina_composto')
+    )
 
     def __repr__(self):
         return f"Disciplina: {self.disciplina}, Codigo: {self.codigo_disciplina}"
