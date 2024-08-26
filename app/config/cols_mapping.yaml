@@ -42,3 +42,12 @@ disciplinas:
   idealSemester: semestre
   curriculumCode: codigo_curriculo
   courseCode: codigo_curso
+
+historico:
+  subjectCode: codigo_disciplina
+  term: periodo 
+  grade: media
+  status: situacao
+  registration: matricula_fake
+  codigo_curso: codigo_curso
+  codigo_curriculo: codigo_curriculo

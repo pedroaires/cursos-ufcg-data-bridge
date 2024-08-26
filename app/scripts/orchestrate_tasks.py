@@ -4,16 +4,10 @@ import core.tasks.cursos_tasks as cursos
 import core.tasks.curriculos_tasks as curriculos
 import core.tasks.alunos_tasks as alunos
 import core.tasks.disciplinas_tasks as disciplinas
-
+import core.tasks.historico_tasks as historico
 import logging
 
 logger = logging.getLogger(__name__)
-def save_all_data():
-    print("Salvando todos os dados...")
-    cursos.save_data.delay()
-    alunos.save_data.delay()
-    curriculos.save_data.delay()
-    print("Dados salvos com sucesso!")
 
 def orchestrate_tasks():
     print("Orquestrando tarefas...")	
@@ -33,12 +27,14 @@ def orchestrate_tasks():
         
         disciplinas.fetch_disciplinas.s(),
         disciplinas.process_data.s(),
+        historico.fetch_historicos.s(),
+        historico.process_data.s(),
 
-        
         cursos.save_data.s(),
         alunos.save_data.s(),
         curriculos.save_data.s(),
-        disciplinas.save_data.s()
+        disciplinas.save_data.s(),
+        historico.save_data.s()
         
     )
     print("Iniciando workflow...")
