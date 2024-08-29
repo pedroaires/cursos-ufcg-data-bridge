@@ -1,9 +1,10 @@
 from core.celery_app import app
 from core.api import APIClient
-from core.config import settings
+from config.load_config import settings, load_column_mappings
 from core.redis_cache import RedisCache
 from core.get_db import get_db
 from core.models.curso import Curso
+from core.utils import rename_columns, remove_extra_keys
 
 import os
 import pandas as pd
@@ -22,7 +23,7 @@ redis_cache = RedisCache()
 
 @app.task
 def fetch_cursos():
-    cursos = api_client.request("/courses")
+    cursos = api_client.request("/courses/getActives")
     if 'errors' in cursos:
         raise Exception("Ocorreu um erro ao buscar os cursos")
     return cursos
@@ -31,11 +32,8 @@ def fetch_cursos():
 def process_data(cursos_json=None):
     print("Processando dados...")
     campus_info = pd.read_csv('./data/campus_info.csv')
-    
-    # Format the JSON data
     formatted_data = formata_tabela(cursos_json, campus_info)
-    
-    # Store the processed JSON data in Redis
+
     redis_cache.set_data("cursos", json.dumps(formatted_data))
     print("Dados processados e colocados no REDIS!")
 
@@ -69,17 +67,16 @@ def get_campus_abrev(course_code, campus_info_df):
 
 def formata_tabela(cursos_json, campus_info):
     formatted_cursos = []
+    curso_mappings = load_column_mappings()['cursos']
     for curso in cursos_json:
         campus_abrev = get_campus_abrev(curso['code'], campus_info)
         nome_schema = formata_schema_curso(curso['name'], campus_abrev)
-        
-        formatted_curso = {
-            'codigo_curso': curso['code'],
-            'nome_comum': curso['name'],
-            'schema': nome_schema,
-            'campus': campus_abrev,
-            'disponivel': curso['status'] == 'A'
-        }
+        formatted_curso = {k:v for k,v in curso.items()}
+        formatted_curso['campus'] = campus_abrev
+        formatted_curso['schema'] = nome_schema
+        formatted_curso['disponivel'] = curso['status'] == 'A'
+        formatted_curso = rename_columns(formatted_curso, curso_mappings)
+        formatted_curso = remove_extra_keys(formatted_curso, curso_mappings)
         formatted_cursos.append(formatted_curso)
     
     return formatted_cursos

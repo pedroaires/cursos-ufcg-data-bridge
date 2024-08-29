@@ -6,7 +6,7 @@ class Aluno(Base):
 
     id_aluno = Column(Integer, primary_key=True, index=True, autoincrement=True)
     periodo_ingressao = Column(Float, index=True)
-    codigo_evasao = Column(String(50), index=True)
+    motivo_inatividade = Column(String(50), index=True)
     codigo_curso = Column(String(8), ForeignKey('cursos.codigo_curso'), index=True)
     
 
