@@ -30,12 +30,7 @@ def orchestrate_tasks():
     workflow = build_workflow()
     result = workflow.apply_async()
     print("Workflow iniciado!")
-    result.get() # Wait for the workflow to finish
+    result.get() 
     print("Workflow finalizado!")
-
-    # print("Salvando todos os dados...")
-    # save_all_data()
-    # print("Todas as tarefas foram executadas com sucesso!")
-
 if __name__ == '__main__':
     orchestrate_tasks()

@@ -83,7 +83,7 @@ class HistoricoTableBuilder(TableBuilder):
         valid_historico_data = []
         invalid_historico_data = []
         
-        for historico in tqdm(historico_data, total=len(historico_data), desc="Validating Hisotrico Data"):
+        for historico in tqdm(historico_data, total=len(historico_data), desc="Validating Historico Data"):
             cod_disc = historico['codigo_disciplina']
             cod_curr = historico['codigo_curriculo']
             cod_curso = historico['codigo_curso']
