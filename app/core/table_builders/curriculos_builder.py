@@ -18,7 +18,7 @@ class CurriculosTableBuilder(TableBuilder):
         curriculos_raw = self.fetch_curriculos(cursos)
         formatted_curriculos = self.process_data(curriculos_raw)
         self.save_data(formatted_curriculos)
-        return "Curriculos"
+        return formatted_curriculos
 
     def fetch_curriculos(self, cursos):
         api = self.get_api_client()

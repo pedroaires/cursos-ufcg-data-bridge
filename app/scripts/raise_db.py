@@ -11,7 +11,8 @@ def build_workflow():
         group(
             raise_table_with_result.s("Alunos"),
             raise_table_with_result.s("Curriculos"),
-        )
+        ),
+        raise_table_with_result.s("Disciplinas"),
     )
     return workflow
 
