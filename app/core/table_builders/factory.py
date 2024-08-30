@@ -3,6 +3,8 @@ from .alunos_builder import AlunosTableBuilder
 from .curriculos_builder import CurriculosTableBuilder
 from .disciplinas_builder import DisciplinasTableBuilder
 from .historico_builder import HistoricoTableBuilder
+from .prerequisitos_builder import PrerequisitosTableBuilder
+
 class TableBuilderFactory:
     _builders = {
         'Cursos': CursosTableBuilder,
@@ -10,6 +12,7 @@ class TableBuilderFactory:
         'Curriculos': CurriculosTableBuilder,
         'Disciplinas': DisciplinasTableBuilder,
         'Historico': HistoricoTableBuilder,
+        'Prerequisitos': PrerequisitosTableBuilder
     }
 
     @classmethod

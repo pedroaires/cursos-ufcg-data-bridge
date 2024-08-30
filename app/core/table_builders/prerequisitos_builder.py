@@ -1,4 +1,6 @@
 import logging
+import time
+import json
 
 from config.load_config import settings
 from core.api import APIClient
@@ -7,69 +9,33 @@ from .table_builder import TableBuilder
 from core.utils import rename_columns, remove_extra_keys, generate_disciplina_id
 from core.models.disciplina import prerequisitos
 from core.get_db import get_db
+from sqlalchemy import insert
 from tqdm import tqdm
-import time
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class HistoricoTableBuilder(TableBuilder):
+class PrerequisitosTableBuilder(TableBuilder):
 
     def _build_impl(self, disciplinas):
-        historico_raw = self.fetch_historico(disciplinas)
-        formatted_historico = self.process_data(historico_raw)
-        self.save_data(formatted_historico, disciplinas)
-        return formatted_historico
+        prerequisitos_raw = self.fetch_prerequisitos()
+        formatted_prerequisitos = self.process_data(prerequisitos_raw)
+        self.save_data(formatted_prerequisitos, disciplinas)
+        return formatted_prerequisitos
 
-    def get_api_client(self):
-        api_client = APIClient(
-            auth_url=settings.auth_url,
-            base_url=settings.base_url,
-            username=settings.username,
-            password=settings.password
-        )
-        return api_client
-    def _get_curso_curriculos_unique(self, disciplinas):
-        start = time.time()
-        unique_combinations = set()
-        for disciplina in disciplinas:
-            codigo_curso = disciplina['codigo_curso']
-            codigo_curriculo = disciplina['codigo_curriculo']
-            unique_combinations.add((codigo_curso,  codigo_curriculo))
-        end = time.time()
-        print(f"Took {end - start} to generate curso and curriculo combinations")
-        return [{'codigo_curso': cod_curso, 'codigo_curriculo': cod_curr} for cod_curso, cod_curr in unique_combinations]
+    def fetch_prerequisitos(self):
+        with open("data/PRE_REQUISITOS_DISCIPLINA.json") as f:
+            prereqs_data = json.load(f)
+        return prereqs_data
     
-    def fetch_historico(self, disciplinas):
-        api = self.get_api_client()
-        curriculos = self._get_curso_curriculos_unique(disciplinas)
-        historico_data = []
-        for curriculo in curriculos:
-            cod_curriculo = curriculo['codigo_curriculo']
-            cod_curso = curriculo['codigo_curso']
-            historicos_json = self._fetch_historico(cod_curso, cod_curriculo, api)
-            historico_data.extend([{**historico, 'codigo_curriculo': cod_curriculo, 'codigo_curso': cod_curso} for historico in historicos_json])
-        return historico_data
-    
-    def _fetch_historico(self, codigo_curso, codigo_curriculo, api):
-        params = {
-            'curriculumCode': codigo_curriculo,
-            'courseCode': codigo_curso,
-            'from': '0000.0',
-            'to': '9999.9',
-            'anonymize': 'true'
-        }
-        historicos_json = api.request('/enrollments', params=params)
-        return historicos_json
-    
-    def process_data(self, historicos_raw):
-        historico_mappings = load_column_mappings()['historico']
-        
-        formatted_historicos = []
-        for historico in historicos_raw:
-            formatted_historico = rename_columns(historico, historico_mappings)
-            formatted_historico = remove_extra_keys(formatted_historico, historico_mappings)
-            formatted_historicos.append(formatted_historico)
-        return formatted_historicos
+    def process_data(self, prerequisitos_raw):
+        prerequisito_mappings = load_column_mappings()['prerequisitos']
+        formatted_prerequisitos = []
+        for prereq in tqdm(prerequisitos_raw, total=len(prerequisitos_raw), desc="Processing Prerequisitos"):
+            formatted_prerequisito = rename_columns(prereq, prerequisito_mappings)
+            formatted_prerequisito = remove_extra_keys(formatted_prerequisito, prerequisito_mappings)
+            formatted_prerequisitos.append(formatted_prerequisito)
+        return formatted_prerequisitos
     
     def _build_disc_lookup(self, disciplinas_data):
         disciplinas_lookup = {
@@ -78,46 +44,57 @@ class HistoricoTableBuilder(TableBuilder):
         }
         return disciplinas_lookup
 
-    def validate_historico_data(self, historico_data, disciplinas):
+    def validate_prereqs_data(self, prereq_data, disciplinas):
         disc_lookup = self._build_disc_lookup(disciplinas)
-        valid_historico_data = []
-        invalid_historico_data = []
-        
-        for historico in historico_data:
-            cod_disc = historico['codigo_disciplina']
-            cod_curr = historico['codigo_curriculo']
-            cod_curso = historico['codigo_curso']
+        valid_prereq_data = []
+        invalid_prereq_data = []
+        mapped_prereq = set()
+
+        for prereq in tqdm(prereq_data, total=len(prereq_data), desc="Validating Prerequisitos Data"):
+            cod_disc = prereq['codigo_disciplina']
+            cod_curr = prereq['codigo_curriculo']
+            cod_curso = prereq['codigo_curso']
+            cod_prereq = prereq['codigo_prerequisito']
             disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
-            if disc_id in disc_lookup:
-                valid_historico_data.append(historico)
+            prereq_id = generate_disciplina_id(cod_curso, cod_curr, cod_prereq)
+
+            disciplina = disc_lookup.get(disc_id)
+            prerequisito = disc_lookup.get(prereq_id)
+            if disciplina and prerequisito:
+                if (disciplina["id"], prerequisito["id"]) not in mapped_prereq:
+                    valid_prereq_data.append({
+                        "disciplina_id": disciplina["id"],
+                        "prerequisito_id": prerequisito["id"]
+                    })
+                    mapped_prereq.add((disciplina["id"], prerequisito["id"]))
             else:
-                invalid_historico_data.append(historico)
+                invalid_prereq_data.append(prereq)
         
-        return valid_historico_data, invalid_historico_data
+        return valid_prereq_data, invalid_prereq_data
         
-
-
-    def insert_valid_data(self, db, valid_historico_data):
+    def insert_valid_data(self, db, valid_prereq_data):
         try:
-            db.bulk_insert_mappings(Historico, valid_historico_data)
+            db.execute(
+                insert(prerequisitos),
+                valid_prereq_data
+            )
             db.commit()
-            print(f"{len(valid_historico_data)} registros inseridos com sucesso.")
+            print(f"{len(valid_prereq_data)} registros inseridos com sucesso.")
         except Exception as e:
             db.rollback()
             print(f"Erro ao inserir dados: {e}")
             raise e
 
+    def log_invalid_data(self, invalid_prereq_data):
+        if invalid_prereq_data:
+            print(f"Dados inválidos: {invalid_prereq_data[:10]}")
 
-    def log_invalid_data(self, invalid_historico_data):
-        if invalid_historico_data:
-            print(f"Dados inválidos: {invalid_historico_data[:10]}")
-
-
-    def save_data(self, historico_data, disciplinas):
+    def save_data(self, prerequisitos_data, disciplinas):
         with get_db() as db:
-            valid_historico_data, invalid_historico_data = self.validate_historico_data(historico_data, disciplinas)
-            
-            if valid_historico_data:
-                self.insert_valid_data(db, valid_historico_data)
-            
-            self.log_invalid_data(invalid_historico_data)
+            valid_prereqs, invalid_prereqs = self.validate_prereqs_data(prerequisitos_data, disciplinas)
+
+            if valid_prereqs:
+                self.insert_valid_data(db, valid_prereqs)
+            else:
+                print("Nenhum dado válido encontrado.")
+            self.log_invalid_data(invalid_prereqs)

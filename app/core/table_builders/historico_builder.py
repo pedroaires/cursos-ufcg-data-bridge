@@ -43,7 +43,7 @@ class HistoricoTableBuilder(TableBuilder):
         api = self.get_api_client()
         curriculos = self._get_curso_curriculos_unique(disciplinas)
         historico_data = []
-        for curriculo in curriculos:
+        for curriculo in tqdm(curriculos, total=len(curriculos), desc="Fetching historico"):
             cod_curriculo = curriculo['codigo_curriculo']
             cod_curso = curriculo['codigo_curso']
             historicos_json = self._fetch_historico(cod_curso, cod_curriculo, api)
@@ -65,7 +65,7 @@ class HistoricoTableBuilder(TableBuilder):
         historico_mappings = load_column_mappings()['historico']
         
         formatted_historicos = []
-        for historico in historicos_raw:
+        for historico in tqdm(historicos_raw, total=len(historicos_raw), desc="Processing Historico"):
             formatted_historico = rename_columns(historico, historico_mappings)
             formatted_historico = remove_extra_keys(formatted_historico, historico_mappings)
             formatted_historicos.append(formatted_historico)
@@ -83,7 +83,7 @@ class HistoricoTableBuilder(TableBuilder):
         valid_historico_data = []
         invalid_historico_data = []
         
-        for historico in historico_data:
+        for historico in tqdm(historico_data, total=len(historico_data), desc="Validating Hisotrico Data"):
             cod_disc = historico['codigo_disciplina']
             cod_curr = historico['codigo_curriculo']
             cod_curso = historico['codigo_curso']

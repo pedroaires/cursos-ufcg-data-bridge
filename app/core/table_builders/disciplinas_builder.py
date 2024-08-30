@@ -25,7 +25,7 @@ class DisciplinasTableBuilder(TableBuilder):
     def fetch_disciplinas(self, curriculos):
         api = self.get_api_client()
         disciplinas_data = []    
-        for curriculo in curriculos[:10]:
+        for curriculo in tqdm(curriculos, total=len(curriculos), desc="Fetching Disciplinas"):
             cod_curriculo = curriculo['codigo_curriculo']
             cod_curso = curriculo['codigo_curso']
             disciplinas_json = self._fetch_disciplinas(cod_curso, cod_curriculo, api)
@@ -56,7 +56,7 @@ class DisciplinasTableBuilder(TableBuilder):
         disciplina_mappings = load_column_mappings()['disciplinas']
         
         formatted_disciplinas = []
-        for disciplina in disciplinas_raw:
+        for disciplina in tqdm(disciplinas_raw, total=len(disciplinas_raw), desc="Processing Disciplinas"):
             formatted_disciplina = rename_columns(disciplina, disciplina_mappings)
             formatted_disciplina = remove_extra_keys(formatted_disciplina, disciplina_mappings)
             formatted_disciplina['id'] = generate_disciplina_id(formatted_disciplina['codigo_curso'], formatted_disciplina['codigo_curriculo'], formatted_disciplina['codigo_disciplina'])
