@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 def build_workflow():
     workflow = chain(
         raise_table_simple.s("Cursos"),
-        raise_table_with_result.s("Alunos")
+        group(
+            raise_table_with_result.s("Alunos"),
+            raise_table_with_result.s("Curriculos"),
+        )
     )
     return workflow
 

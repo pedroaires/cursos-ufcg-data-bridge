@@ -1,10 +1,12 @@
 from .cursos_builder import CursosTableBuilder
 from .alunos_builder import AlunosTableBuilder
+from .curriculos_builder import CurriculosTableBuilder
 
 class TableBuilderFactory:
     _builders = {
         'Cursos': CursosTableBuilder,
         'Alunos': AlunosTableBuilder,
+        'Curriculos': CurriculosTableBuilder,
     }
 
     @classmethod
