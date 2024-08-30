@@ -15,7 +15,8 @@ class Historico(Base):
         PrimaryKeyConstraint('codigo_disciplina', 'codigo_curriculo', 'codigo_curso', 'periodo', 'matricula_fake'),
         ForeignKeyConstraint(
             ['codigo_curriculo', 'codigo_curso', 'codigo_disciplina'],
-            ['disciplinas.codigo_curriculo', 'disciplinas.codigo_curso', 'disciplinas.codigo_disciplina']
+            ['disciplinas.codigo_curriculo', 'disciplinas.codigo_curso', 'disciplinas.codigo_disciplina'],
+            ondelete="CASCADE"
         ),
     )
     def __repr__(self):
