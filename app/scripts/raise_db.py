@@ -13,6 +13,7 @@ def build_workflow():
             raise_table_with_result.s("Curriculos"),
         ),
         raise_table_with_result.s("Disciplinas"),
+        raise_table_with_result.s("Historico"),
     )
     return workflow
 

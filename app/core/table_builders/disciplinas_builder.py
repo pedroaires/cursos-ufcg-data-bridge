@@ -4,7 +4,7 @@ from config.load_config import settings
 from core.api import APIClient
 from config.load_config import load_column_mappings
 from .table_builder import TableBuilder
-from core.utils import rename_columns, remove_extra_keys
+from core.utils import rename_columns, remove_extra_keys, generate_disciplina_id
 from core.models.disciplina import Disciplina
 from core.get_db import get_db
 from tqdm import tqdm
@@ -50,9 +50,7 @@ class DisciplinasTableBuilder(TableBuilder):
             password=settings.password
         )
         return api_client
-    
-    def _generate_disc_id(self, cod_curso, cod_curr, cod_disc):
-        return f"{cod_curso}-{cod_curr}-{cod_disc}"
+
 
     def process_data(self, disciplinas_raw):
         disciplina_mappings = load_column_mappings()['disciplinas']
@@ -61,7 +59,7 @@ class DisciplinasTableBuilder(TableBuilder):
         for disciplina in disciplinas_raw:
             formatted_disciplina = rename_columns(disciplina, disciplina_mappings)
             formatted_disciplina = remove_extra_keys(formatted_disciplina, disciplina_mappings)
-            formatted_disciplina['id'] = self._generate_disc_id(formatted_disciplina['codigo_curso'], formatted_disciplina['codigo_curriculo'], formatted_disciplina['codigo_disciplina'])
+            formatted_disciplina['id'] = generate_disciplina_id(formatted_disciplina['codigo_curso'], formatted_disciplina['codigo_curriculo'], formatted_disciplina['codigo_disciplina'])
             formatted_disciplinas.append(formatted_disciplina)
         return formatted_disciplinas
     
