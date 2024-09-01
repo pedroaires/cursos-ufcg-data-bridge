@@ -20,8 +20,8 @@ redis_cache_config = {
 from celery.schedules import crontab
 
 beat_schedule = {
-    'orchestrate-every-minute': {
+    'orchestrate-daily-at-4am': {
         'task': 'scripts.orchestrator.orchestrate_tasks',  
-        'schedule': crontab(minute='*'), 
+        'schedule': crontab(hour=4, minute=0),  # Executa diariamente às 4h
     },
 }
