@@ -18,7 +18,6 @@ class HistoricoTableBuilder(TableBuilder):
         historico_raw = self.fetch_historico(disciplinas)
         formatted_historico = self.process_data(historico_raw)
         self.save_data(formatted_historico, disciplinas)
-        return formatted_historico
 
     def get_api_client(self):
         api_client = APIClient(

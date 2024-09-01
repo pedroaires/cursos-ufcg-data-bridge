@@ -3,13 +3,13 @@ import time
 import redis
 
 from celery import chain, group, shared_task
-from config.db_config import reset_database
+from config.db_config import reset_database, backup_database
 from core.tasks import raise_table_simple, raise_table_with_result
 
 logger = logging.getLogger(__name__)
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-LOCK_EXPIRE = 60 * 30 # Lock expires in 30 minutes
+LOCK_EXPIRE = 60 * 30 # Lock expira em 30 minutos
 
 
 class RedisLock:
@@ -19,10 +19,17 @@ class RedisLock:
         self.expire = expire
 
     def acquire(self):
-        return self.client.set(self.lock_name, 'true', ex=self.expire, nx=True)
-
+        try:
+            return self.client.set(self.lock_name, 'true', ex=self.expire, nx=True)
+        except redis.RedisError as e:
+            logger.error(f"Error ao adiquirir a lock: {e}")
+            return False
     def release(self):
-        return self.client.delete(self.lock_name)
+        try:
+            return self.client.delete(self.lock_name)
+        except redis.RedisError as e:
+            logger.error(f"Erro ao liberar lock: {e}")
+            return False
     
 
 def build_workflow():
@@ -41,7 +48,7 @@ def build_workflow():
     )
     return workflow
 
-@shared_task
+@shared_task(ignore_result=True)
 def finish_task(prev_task_result=None):
     lock_name = "orchestrate_tasks_lock"
     RedisLock(redis_client, lock_name).release()
@@ -53,8 +60,15 @@ def orchestrate_tasks():
     lock = RedisLock(redis_client, lock_name)
     if lock.acquire():
         try:
-            logger.info(msg="Lock acquired for orchestrate_tasks")
-            logger.info(msg="Orquestrando tarefas...")	
+            logger.info(msg="Lock adquirida")
+            
+            logger.info(msg='Iniciando backup do BD')
+            backup_success = backup_database()
+            logger.info(msg='Backup finalizado')
+            if not backup_success:
+                logger.error(msg="Backup falhou, abortando workflow...")
+                lock.release()
+                return None
             logger.info(msg="Resetando BD...")
             reset_database()
             logger.info(msg="BD resetado!")
@@ -63,10 +77,10 @@ def orchestrate_tasks():
             workflow = build_workflow()
             workflow.apply_async()
         except Exception as e:
-            logger.error(f"Error in orchestrate_tasks: {e}")
+            logger.error(f"Erro em orchestrate_tasks: {e}")
             lock.release()
     else:
-        logger.info("Lock not acquired for orchestrate_tasks")
+        logger.info("Lock nao adquirida para orchestrate tasks")
         return None
 
 if __name__ == '__main__':
