@@ -15,3 +15,13 @@ redis_cache_config = {
     'port': 6380,
     'db': 0,
 }
+
+# Celery Beat schedule configuration
+from celery.schedules import crontab
+
+beat_schedule = {
+    'orchestrate-every-minute': {
+        'task': 'scripts.orchestrator.orchestrate_tasks',  
+        'schedule': crontab(minute='*'), 
+    },
+}

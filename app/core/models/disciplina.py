@@ -5,8 +5,8 @@ from config.db_config import Base
 # Junction table for self-referencing many-to-many relationship
 prerequisitos = Table(
     'prerequisitos', Base.metadata,
-    Column('disciplina_id', String(100), ForeignKey('disciplinas.id')),
-    Column('prerequisito_id', String(100), ForeignKey('disciplinas.id'))
+    Column('disciplina_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE")),
+    Column('prerequisito_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE"))
 )
 
 class Disciplina(Base):
@@ -31,7 +31,8 @@ class Disciplina(Base):
     __table_args__ = (
         ForeignKeyConstraint(
             ['codigo_curriculo', 'codigo_curso'],
-            ['curriculos.codigo_curriculo', 'curriculos.codigo_curso']
+            ['curriculos.codigo_curriculo', 'curriculos.codigo_curso'],
+            ondelete="CASCADE"
         ),
         UniqueConstraint('codigo_curriculo', 'codigo_curso', 'codigo_disciplina', name='uix_disciplina_composto')
     )
