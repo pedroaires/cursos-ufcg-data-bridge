@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from config.db_config import Base
 
-# Junction table for self-referencing many-to-many relationship
+
 prerequisitos = Table(
     'prerequisitos', Base.metadata,
     Column('disciplina_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE")),
