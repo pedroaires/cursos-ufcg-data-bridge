@@ -15,6 +15,7 @@ enable_utc = True
 
 result_expires = 3600
 
+imports = ('core.tasks', 'scripts.orchestrator')
 # celery beat config
 from celery.schedules import crontab
 

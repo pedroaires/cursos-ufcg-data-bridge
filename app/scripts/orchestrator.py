@@ -1,10 +1,11 @@
 import logging
 import redis
 import os
-
+import subprocess
+import time 
 from celery import chain, group, shared_task
 from config.db_config import reset_database, backup_database
-from core.tasks import raise_table_simple, raise_table_with_result
+from core.tasks import raise_table_simple, raise_table_with_result, app
 
 logger = logging.getLogger(__name__)
 
@@ -85,5 +86,18 @@ def orchestrate_tasks():
         return None
 
 if __name__ == '__main__':
-    result = orchestrate_tasks().apply()
-    result.get()
+    worker = subprocess.Popen(['celery', '-A', 'core.tasks', 'worker', '--loglevel=info'])
+    time.sleep(5)
+    result = app.send_task('scripts.orchestrator.orchestrate_tasks')
+    inspector = app.control.inspect()
+    
+    while True:
+        active_tasks = inspector.active()
+        
+        # Check if there are any active tasks
+        if not active_tasks or all(len(tasks) == 0 for tasks in active_tasks.values()):
+            break
+        
+        # Sleep for a bit before checking again
+        time.sleep(5)
+    worker.terminate()
