@@ -8,6 +8,7 @@ class Aluno(Base):
     periodo_ingressao = Column(Float, index=True)
     motivo_inatividade = Column(String(50), index=True)
     codigo_curso = Column(String(8), ForeignKey('cursos.codigo_curso', ondelete="CASCADE"), index=True)
+    situacao = Column(String(50), index=True)
     
 
     def __repr__(self):
