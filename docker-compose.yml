@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -21,7 +21,7 @@ services:
   celery_worker:
     build: .
     container_name: celery_worker
-    command: celery -A core.celery_app worker --loglevel=info
+    command: celery -A core.celery_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=1
     env_file:
       - .env
     volumes:
