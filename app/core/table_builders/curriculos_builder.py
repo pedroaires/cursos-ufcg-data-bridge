@@ -25,15 +25,8 @@ class CurriculosTableBuilder(TableBuilder):
         curriculos_data = []
         for curso in tqdm(cursos, total=len(cursos), desc="Fetching Curriculos"):
             if curso['disponivel']:
-                curriculos_json = self.fetch_curriculos_list(curso['codigo_curso'], api)
-                for curr_dict in curriculos_json:
-                    cod_curriculo = curr_dict['curriculumCode']
-                    curriculo_info_json = self.fetch_curriculos_info(curso['codigo_curso'], cod_curriculo, api)
-                    if curriculos_json is None:
-                        continue
-                    curriculo_info_json['codigo_curso'] = curso['codigo_curso']
-                    curriculo_info_json['codigo_curriculo'] = cod_curriculo
-                    curriculos_data.append(curriculo_info_json)
+                curriculos_json = self.fetch_curriculos_by_curso(curso['codigo_curso'], api)
+                curriculos_data.extend(curriculos_json)
         return curriculos_data
     
     def get_api_client(self):
@@ -45,18 +38,16 @@ class CurriculosTableBuilder(TableBuilder):
         )
         return api_client
 
-    def fetch_curriculos_list(self, codigo_curso, api_client):
-        params = {"courseCode": codigo_curso}
-        curriculos_json = api_client.request("/course/getActivesCurriculum", params=params)
+    def fetch_curriculos_by_curso(self, codigo_curso, api_client):
+        params = {"curso": codigo_curso}
+        response = api_client.request("/curriculos", params=params)
+        if response.status_code != 200:
+            logger.warning(msg=f"Erro ao buscar curriculos do curso {codigo_curso}")
+        curriculos_json = response.json()
         if curriculos_json is None:
-            logger.warning(msg=f"Erro ao buscar curriculos do curso {codigo_curso}, tentando por outra rota...")
-            curriculos_json = api_client.request("/course/getCurriculumCodes", params=params)
+            logger.warning(msg=f"Curriculos do curso {codigo_curso} não encontrados")
+            return []
         return curriculos_json
-
-    def fetch_curriculos_info(self, codigo_curso, codigo_curriculo, api_client):
-        params = {"courseCode": codigo_curso, "curriculumCode": codigo_curriculo}
-        curriculo_info_json = api_client.request("/course/getCurriculum", params=params)
-        return curriculo_info_json
     
     def process_data(self, curriculos_raw):
         curriculo_mappings = load_column_mappings()['curriculos']
@@ -72,6 +63,7 @@ class CurriculosTableBuilder(TableBuilder):
             try:
                 db.bulk_insert_mappings(Curriculo, curriculos_data)
                 db.commit()
+                logger.info("Dados de curriculos salvos com sucesso")
             except:
                 db.rollback()
                 raise(Exception("Erro ao salvar dados de curriculos no banco de dados"))
