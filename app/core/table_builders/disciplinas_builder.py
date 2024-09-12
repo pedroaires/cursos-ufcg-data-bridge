@@ -34,10 +34,16 @@ class DisciplinasTableBuilder(TableBuilder):
     
     def _fetch_disciplinas(self, codigo_curso, codigo_curriculo, api):
         params = {
-            'courseCode': codigo_curso,
-            'curriculumCode': codigo_curriculo
+            'curso': codigo_curso,
+            'curriculo': codigo_curriculo
         }
-        disciplinas_json = api.request('/course/getSubjectsPerCurriculum', params=params)
+        response = api.request('/disciplinas-por-curriculo', params=params)
+        if response.status_code != 200:
+            logger.error(f"Erro ao buscar dados de disciplinas do curso {codigo_curso} e curriculo {codigo_curriculo}: {response.content}")
+            return []
+        disciplinas_json = response.json()
+        if disciplinas_json is None:
+            return []
         return disciplinas_json
 
         
@@ -68,6 +74,7 @@ class DisciplinasTableBuilder(TableBuilder):
             try:
                 db.bulk_insert_mappings(Disciplina, disciplinas_data)
                 db.commit()
+                logger.info("Dados de disciplinas salvos com sucesso")
             except:
                 db.rollback()
                 raise(Exception("Erro ao salvar dados de disciplinas no banco de dados"))

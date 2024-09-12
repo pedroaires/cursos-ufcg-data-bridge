@@ -17,22 +17,70 @@ logger = logging.getLogger(__name__)
 
 class PrerequisitosTableBuilder(TableBuilder):
 
-    def _build_impl(self, disciplinas):
-        prerequisitos_raw = self.fetch_prerequisitos()
+    def _build_impl(self, previous_result):
+        disciplinas = previous_result[0]
+        prerequisitos_raw = self.fetch_prerequisitos(disciplinas)
         formatted_prerequisitos = self.process_data(prerequisitos_raw)
         self.save_data(formatted_prerequisitos, disciplinas)
         return formatted_prerequisitos
-
-    def fetch_prerequisitos(self):
-        with open("data/PRE_REQUISITOS_DISCIPLINA.json") as f:
-            prereqs_data = json.load(f)
-        return prereqs_data
+    def get_api_client(self):
+        api_client = APIClient(
+            auth_url=settings.auth_url,
+            base_url=settings.base_url,
+            username=settings.username,
+            password=settings.password
+        )
+        return api_client
     
+    def get_unique_curso_curriculo(self, disciplinas):
+        unique_curso_curriculo = set()
+        for disc in disciplinas:
+            unique_curso_curriculo.add((disc['codigo_curso'], disc['codigo_curriculo']))
+        return unique_curso_curriculo
+    def fetch_prerequisitos(self, disciplinas):
+        api = self.get_api_client()
+        prerequisitos_data = []
+        unique_curso_curriculo = self.get_unique_curso_curriculo(disciplinas)
+        for (curso, curriculo) in unique_curso_curriculo:
+            prerequisitos_json = self.fetch_prerequisitos_by_curso_curriculo(curso, curriculo, api)
+            prerequisitos_data.extend(prerequisitos_json)
+            
+        return prerequisitos_data
+    def fetch_prerequisitos_by_curso_curriculo(self, cod_curso, cod_curriculo, api):
+        params = {
+            'curso': cod_curso,
+            'curriculo': cod_curriculo,
+        }
+        response = api.request("/pre-requisito-disciplinas", params=params)
+        if response.status_code != 200:
+            logger.error(f"Erro ao buscar dados de prerequisitos do curs: {cod_curso} e curriculo: {cod_curriculo}: {response.status_code}")
+            return []
+        
+        prerequisitos_json = response.json()
+        if prerequisitos_json is None:
+            return []
+        return prerequisitos_json
+    def add_discs_ids(self, prerequisito):
+        cod_disc = prerequisito['codigo_da_disciplina']
+        cod_prereq = prerequisito['condicao']
+        cod_curr = prerequisito['codigo_do_curriculo']
+        cod_curso = prerequisito['codigo_do_curso']
+        disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
+        if cod_prereq:
+            prereq_id = generate_disciplina_id(cod_curso, cod_curr, cod_prereq)
+            prerequisito['prerequisito_id'] = prereq_id
+        else:
+            prerequisito['prerequisito_id'] = None
+
+        prerequisito['disciplina_id'] = disc_id
+
+        return prerequisito
     def process_data(self, prerequisitos_raw):
         prerequisito_mappings = load_column_mappings()['prerequisitos']
         formatted_prerequisitos = []
         for prereq in tqdm(prerequisitos_raw, total=len(prerequisitos_raw), desc="Processing Prerequisitos"):
-            formatted_prerequisito = rename_columns(prereq, prerequisito_mappings)
+            formatted_prerequisito = self.add_discs_ids(prereq)
+            formatted_prerequisito = rename_columns(formatted_prerequisito, prerequisito_mappings)
             formatted_prerequisito = remove_extra_keys(formatted_prerequisito, prerequisito_mappings)
             formatted_prerequisitos.append(formatted_prerequisito)
         return formatted_prerequisitos
@@ -51,22 +99,18 @@ class PrerequisitosTableBuilder(TableBuilder):
         mapped_prereq = set()
 
         for prereq in tqdm(prereq_data, total=len(prereq_data), desc="Validating Prerequisitos Data"):
-            cod_disc = prereq['codigo_disciplina']
-            cod_curr = prereq['codigo_curriculo']
-            cod_curso = prereq['codigo_curso']
-            cod_prereq = prereq['codigo_prerequisito']
-            disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
-            prereq_id = generate_disciplina_id(cod_curso, cod_curr, cod_prereq)
+            disc_id = prereq['disciplina_id']
+            prereq_id = prereq['prerequisito_id']
 
-            disciplina = disc_lookup.get(disc_id)
-            prerequisito = disc_lookup.get(prereq_id)
-            if disciplina and prerequisito:
-                if (disciplina["id"], prerequisito["id"]) not in mapped_prereq:
-                    valid_prereq_data.append({
-                        "disciplina_id": disciplina["id"],
-                        "prerequisito_id": prerequisito["id"]
-                    })
-                    mapped_prereq.add((disciplina["id"], prerequisito["id"]))
+            
+            if disc_lookup.get(disc_id):
+                if prereq_id is not None and disc_lookup.get(prereq_id) is not None:
+                    valid_prereq_data.append(prereq)
+                    # mapped_prereq.add((disc_id, prereq_id))
+                elif prereq_id is None:
+                    valid_prereq_data.append(prereq)
+                else:
+                    invalid_prereq_data.append(prereq)
             else:
                 invalid_prereq_data.append(prereq)
         
@@ -95,6 +139,7 @@ class PrerequisitosTableBuilder(TableBuilder):
 
             if valid_prereqs:
                 self.insert_valid_data(db, valid_prereqs)
+                logger.info("Dados de prerequisitos salvos com sucesso!")
             else:
                 print("Nenhum dado válido encontrado.")
             self.log_invalid_data(invalid_prereqs)

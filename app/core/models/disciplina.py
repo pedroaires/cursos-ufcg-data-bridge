@@ -6,7 +6,10 @@ from config.db_config import Base
 prerequisitos = Table(
     'prerequisitos', Base.metadata,
     Column('disciplina_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE")),
-    Column('prerequisito_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE"))
+    Column('prerequisito_id', String(100), ForeignKey('disciplinas.id', ondelete="CASCADE")),
+    Column('ordem_prioridade', Integer, index=True),
+    Column('tipo', String(100), index=True),
+    Column('operador', String(10), index=True),
 )
 
 class Disciplina(Base):
