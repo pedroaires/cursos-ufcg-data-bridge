@@ -1,5 +1,5 @@
 import logging
-
+import requests
 from config.load_config import settings
 from core.api import APIClient
 from config.load_config import load_column_mappings
@@ -8,6 +8,7 @@ from core.utils import rename_columns, remove_extra_keys, generate_disciplina_id
 from core.models.disciplina import Disciplina
 from core.get_db import get_db
 from tqdm import tqdm
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +33,11 @@ class DisciplinasTableBuilder(TableBuilder):
             disciplinas_data.extend(disciplinas_json)
         return disciplinas_data
     
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(min=5, max=120),
+        retry=retry_if_exception_type(requests.exceptions.RequestException)
+    )
     def _fetch_disciplinas(self, codigo_curso, codigo_curriculo, api):
         params = {
             'curso': codigo_curso,
@@ -39,7 +45,9 @@ class DisciplinasTableBuilder(TableBuilder):
         }
         response = api.request('/disciplinas-por-curriculo', params=params)
         if response.status_code != 200:
-            logger.error(f"Erro ao buscar dados de disciplinas do curso {codigo_curso} e curriculo {codigo_curriculo}: {response.content}")
+            logger.error(f"Erro ao buscar dados de disciplinas do curso {codigo_curso} e curriculo {codigo_curriculo}: {response.status_code}")
+            if response.status_code == 500:
+                raise requests.exceptions.RequestException(f"Erro ao buscar dados de disciplinas do curso {codigo_curso} e curriculo {codigo_curriculo}: {response.status_code}")
             return []
         disciplinas_json = response.json()
         if disciplinas_json is None:

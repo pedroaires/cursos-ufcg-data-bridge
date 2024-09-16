@@ -32,7 +32,8 @@ class HistoricoTableBuilder(TableBuilder):
     def fetch_historico(self, alunos):
         api = self.get_api_client()
         historico_data = []
-        for aluno in tqdm(alunos, total=len(alunos), desc="Fetching historico"):
+        slice_data = alunos[:1000]
+        for aluno in tqdm(slice_data, total=len(slice_data), desc="Fetching historico"):
             aluno_json = self._fetch_historico(aluno['matricula'], api)
             if aluno_json != []:
                 historicos_json = self._get_historicos_from_aluno(aluno_json)
@@ -67,7 +68,7 @@ class HistoricoTableBuilder(TableBuilder):
         }
         response = api.request('/estudantes/historico/estudante-anonimizado', params=params)
         if response.status_code != 200:
-            logger.error(f"Erro ao buscar dados de historico do aluno {matricula} na API: {response.status_code}")
+            # logger.error(f"Erro ao buscar dados de historico do aluno {matricula} na API: {response.status_code}")
             return []
         historicos_json = response.json()
         if historicos_json is None:

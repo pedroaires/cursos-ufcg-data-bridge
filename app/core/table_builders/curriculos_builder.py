@@ -1,5 +1,6 @@
 import logging
-
+import requests
+import time
 from config.load_config import settings
 from core.api import APIClient
 from config.load_config import load_column_mappings
@@ -8,7 +9,7 @@ from core.utils import rename_columns, remove_extra_keys
 from core.models.curriculo import Curriculo
 from core.get_db import get_db
 from tqdm import tqdm
-
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_exponential
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class CurriculosTableBuilder(TableBuilder):
             if curso['disponivel']:
                 curriculos_json = self.fetch_curriculos_by_curso(curso['codigo_curso'], api)
                 curriculos_data.extend(curriculos_json)
+                time.sleep(1)
         return curriculos_data
     
     def get_api_client(self):
@@ -37,12 +39,18 @@ class CurriculosTableBuilder(TableBuilder):
             password=settings.password
         )
         return api_client
-
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(min=5, max=120),
+        retry=retry_if_exception_type(requests.exceptions.RequestException)
+    )
     def fetch_curriculos_by_curso(self, codigo_curso, api_client):
         params = {"curso": codigo_curso}
         response = api_client.request("/curriculos", params=params)
         if response.status_code != 200:
-            logger.warning(msg=f"Erro ao buscar curriculos do curso {codigo_curso}")
+            logger.error(msg=f"Erro ao buscar curriculos do curso {codigo_curso}: {response.status_code}")
+            if response.status_code == 500:
+                raise(requests.exceptions.RequestException(f"Erro ao buscar curriculos do curso {codigo_curso}: {response.status_code}"))
         curriculos_json = response.json()
         if curriculos_json is None:
             logger.warning(msg=f"Curriculos do curso {codigo_curso} não encontrados")

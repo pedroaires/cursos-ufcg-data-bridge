@@ -1,7 +1,7 @@
 import logging
 import time
 import json
-
+import requests
 from config.load_config import settings
 from core.api import APIClient
 from config.load_config import load_column_mappings
@@ -11,6 +11,7 @@ from core.models.disciplina import prerequisitos
 from core.get_db import get_db
 from sqlalchemy import insert
 from tqdm import tqdm
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_exponential
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,6 +47,12 @@ class PrerequisitosTableBuilder(TableBuilder):
             prerequisitos_data.extend(prerequisitos_json)
             
         return prerequisitos_data
+    
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(min=5, max=120),
+        retry=retry_if_exception_type(requests.exceptions.RequestException)
+    )
     def fetch_prerequisitos_by_curso_curriculo(self, cod_curso, cod_curriculo, api):
         params = {
             'curso': cod_curso,
@@ -54,6 +61,8 @@ class PrerequisitosTableBuilder(TableBuilder):
         response = api.request("/pre-requisito-disciplinas", params=params)
         if response.status_code != 200:
             logger.error(f"Erro ao buscar dados de prerequisitos do curs: {cod_curso} e curriculo: {cod_curriculo}: {response.status_code}")
+            if response.status_code == 500:
+                raise(requests.exceptions.RequestException(f"Erro ao buscar prerequisitos do curso: {cod_curso} e curriculo: {cod_curriculo}"))
             return []
         
         prerequisitos_json = response.json()
@@ -62,17 +71,15 @@ class PrerequisitosTableBuilder(TableBuilder):
         return prerequisitos_json
     def add_discs_ids(self, prerequisito):
         cod_disc = prerequisito['codigo_da_disciplina']
-        cod_prereq = prerequisito['condicao']
         cod_curr = prerequisito['codigo_do_curriculo']
         cod_curso = prerequisito['codigo_do_curso']
-        disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
-        if cod_prereq:
-            prereq_id = generate_disciplina_id(cod_curso, cod_curr, cod_prereq)
-            prerequisito['prerequisito_id'] = prereq_id
+        if self.is_tipo_disciplina_cursada(prerequisito['tipo']):
+            prerequisito_id = generate_disciplina_id(cod_curso, cod_curr, prerequisito['condicao'])
         else:
-            prerequisito['prerequisito_id'] = None
-
+            prerequisito_id = None
+        disc_id = generate_disciplina_id(cod_curso, cod_curr, cod_disc)
         prerequisito['disciplina_id'] = disc_id
+        prerequisito['prerequisito_id'] = prerequisito_id
 
         return prerequisito
     def process_data(self, prerequisitos_raw):
@@ -96,26 +103,24 @@ class PrerequisitosTableBuilder(TableBuilder):
         disc_lookup = self._build_disc_lookup(disciplinas)
         valid_prereq_data = []
         invalid_prereq_data = []
-        mapped_prereq = set()
 
         for prereq in tqdm(prereq_data, total=len(prereq_data), desc="Validating Prerequisitos Data"):
             disc_id = prereq['disciplina_id']
-            prereq_id = prereq['prerequisito_id']
-
-            
-            if disc_lookup.get(disc_id):
-                if prereq_id is not None and disc_lookup.get(prereq_id) is not None:
-                    valid_prereq_data.append(prereq)
-                    # mapped_prereq.add((disc_id, prereq_id))
-                elif prereq_id is None:
-                    valid_prereq_data.append(prereq)
-                else:
-                    invalid_prereq_data.append(prereq)
+            is_valid_prereq = True
+            if self.is_tipo_disciplina_cursada(prereq['tipo']):
+                is_valid_prereq = self.is_valid_disc(prereq['prerequisito_id'], disc_lookup)
+                
+            if self.is_valid_disc(disc_id, disc_lookup) and is_valid_prereq:
+                valid_prereq_data.append(prereq)
             else:
                 invalid_prereq_data.append(prereq)
         
         return valid_prereq_data, invalid_prereq_data
-        
+    def is_tipo_disciplina_cursada(self, tipo):
+        return tipo.lower() == 'disciplina cursada'.lower()
+    def is_valid_disc(self, disc_id, disc_lookup):
+        return not disc_lookup.get(disc_id) is None
+
     def insert_valid_data(self, db, valid_prereq_data):
         try:
             db.execute(
@@ -136,7 +141,6 @@ class PrerequisitosTableBuilder(TableBuilder):
     def save_data(self, prerequisitos_data, disciplinas):
         with get_db() as db:
             valid_prereqs, invalid_prereqs = self.validate_prereqs_data(prerequisitos_data, disciplinas)
-
             if valid_prereqs:
                 self.insert_valid_data(db, valid_prereqs)
                 logger.info("Dados de prerequisitos salvos com sucesso!")

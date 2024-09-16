@@ -45,7 +45,8 @@ historico:
 
 prerequisitos:
   disciplina_id: disciplina_id
-  pre_requisito_id: prerequisito_id
+  prerequisito_id: prerequisito_id
+  condicao: condicao
   ordem_prioridade: ordem_prioridade
   tipo: tipo
   operador: operador

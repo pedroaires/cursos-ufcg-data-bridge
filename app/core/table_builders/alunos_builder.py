@@ -36,7 +36,8 @@ class AlunosTableBuilder(TableBuilder):
         }
         response = api_client.request('/estudantes', params=params)
         if response.status_code != 200:
-            logger.error(f"Erro ao buscar dados de alunos do curso {codigo_curso}: {response.content}")
+            logger.error(f"Erro ao buscar dados de alunos do curso {codigo_curso}: {response.status_code}")
+            
             return []
         alunos_json = response.json()
         if alunos_json is None:
