@@ -3,15 +3,17 @@ from requests.exceptions import HTTPError
 
 
 class APIClient:
-    def __init__(self, auth_url, base_url, username, password) -> None:
+    def __init__(self, auth_url, base_url, username, password, need_token=False) -> None:
         self.auth_url = auth_url
         self.base_url = base_url
         self.username = username
         self.password = password
-        self.token = self.get_token()
+        self.token =  self.get_token() if need_token else None
         self.headers = {
             'accept': 'application/json',
             'Authentication-Token': self.token
+        } if need_token else {
+            'accept': 'application/json'
         }
     
     def get_token(self):
@@ -45,8 +47,7 @@ class APIClient:
             else:
                 raise ValueError("Método HTTP não suportado")
             
-            response.raise_for_status()
-            return response.json()
+            return response
         except HTTPError as http_err:
             print(f"Ocorreu um erro HTTP durante a requisição: {http_err}")
         except Exception as err:

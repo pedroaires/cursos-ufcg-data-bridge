@@ -2,59 +2,51 @@
 # Mesmo as colunas que nao necessitam ser mapeadas precisam estar presentes no arquivo
 # pois as que nao estiverem serao removidas entao se nao quiser mapear uma coluna apenas coloque o mesmo nome no mapeamento
 cursos:
-  code: codigo_curso
-  name: nome_comum
+  codigo_do_curso: codigo_curso
+  descricao: nome_comum
   disponivel: disponivel
   schema: schema
   campus: campus
 
 alunos:
-  statusTerm: periodo_situacao
-  admissionTerm: periodo_ingressao
-  admissionCode: codigo_ingressao
-  status: situacao
-  inactivityReason: motivo_inatividade
-  placeOfBirth: estado
-  secondarySchoolType: tipo_ensino
-  affirmativePolicy: modalidade_concorrencia
-  age: idade
-  gender: genero
-  codigo_curso: codigo_curso
+  matricula_do_estudante: matricula
+  periodo_de_ingresso: periodo_ingressao
+  situacao: situacao
+  motivo_de_evasao: motivo_inatividade
+  codigo_do_curso: codigo_curso
 
 curriculos:
-  courseCode: codigo_curso
-  curriculumCode: codigo_curriculo
-  minNumberOfTerms: min_periodos
-  maxNumberOfTerms: max_periodos
-  minNumberOfEnrolledCredits: min_creditos_matriculados
-  maxNumberOfEnrolledCredits: max_creditos_matriculados
-  minMandatoryCreditsNeeded: min_creditos_obrigatorios
-  minOptionalCreditsNeeded: min_creditos_optativos
-  minComplementaryCreditsNeeded: min_creditos_complementares
-  minAcademicsExtensionActivities: min_atividades_extensao
+  codigo_do_curso: codigo_curso
+  codigo_do_curriculo: codigo_curriculo
+  duracao_minima: min_periodos
+  duracao_maxima: max_periodos
+  minimo_creditos_disciplinas_optativas: min_creditos_optativos
+  carga_horaria_minima_total: carga_horaria_minima_total
 
 disciplinas:
   id: id
-  subjectCode: codigo_disciplina
-  name: disciplina
-  credits: creditos
-  hours: horas
-  type: tipo 
-  idealSemester: semestre
-  curriculumCode: codigo_curriculo
-  courseCode: codigo_curso
+  codigo_da_disciplina: codigo_disciplina
+  nome: disciplina
+  quantidade_de_creditos: creditos
+  horas_totais: horas
+  tipo: tipo
+  semestre_ideal: semestre
+  codigo_do_curriculo: codigo_curriculo
+  codigo_do_curso: codigo_curso
 
 historico:
-  subjectCode: codigo_disciplina
-  term: periodo 
-  grade: media
+  codigo_da_disciplina: codigo_disciplina
+  periodo: periodo
+  media_final: media
   status: situacao
-  registration: matricula_fake
-  codigo_curso: codigo_curso
-  codigo_curriculo: codigo_curriculo
+  codigo_do_curriculo: codigo_curriculo
+  codigo_do_curso: codigo_curso
+  matricula_do_estudante: matricula
 
 prerequisitos:
-  PRD_DIC_CCU_CUR_COD_CURSO: codigo_curso
-  PRD_DIC_CCU_COD_CURRICULO: codigo_curriculo
-  PRD_DIC_DIS_DISCIPLINA: codigo_disciplina
-  PRD_CONDICAO: codigo_prerequisito
+  disciplina_id: disciplina_id
+  prerequisito_id: prerequisito_id
+  condicao: condicao
+  ordem_prioridade: ordem_prioridade
+  tipo: tipo
+  operador: operador

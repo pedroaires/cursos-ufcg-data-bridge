@@ -32,20 +32,17 @@ class AlunosTableBuilder(TableBuilder):
     
     def fetch_alunos_by_curso(self, codigo_curso, api_client):
         params = {
-            'courseCode': codigo_curso,
-            'from': '0000.0',
-            'to': '9999.9',
-            'anonymize': 'true'
+            'curso': codigo_curso
         }
-        alunos_json = api_client.request('/students', params=params)
-        alunos_do_curso = []
-        if 'students' in alunos_json:
-            for aluno in alunos_json['students']:
-                aluno['codigo_curso'] = codigo_curso
-                alunos_do_curso.append(aluno)
-        else:
-            raise(f"Error on course {codigo_curso}")
-        return alunos_do_curso
+        response = api_client.request('/estudantes', params=params)
+        if response.status_code != 200:
+            logger.error(f"Erro ao buscar dados de alunos do curso {codigo_curso}: {response.status_code}")
+            
+            return []
+        alunos_json = response.json()
+        if alunos_json is None:
+            return []
+        return alunos_json
     
     def get_api_client(self):
         api_client = APIClient(
@@ -72,6 +69,7 @@ class AlunosTableBuilder(TableBuilder):
             try:
                 db.bulk_insert_mappings(Aluno, alunos_data)
                 db.commit()
+                logger.info("Dados de alunos salvos com sucesso!")
             except:
                 db.rollback()
                 raise(Exception("Erro ao salvar dados de alunos no banco de dados"))
