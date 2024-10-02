@@ -1,0 +1,5 @@
+app/backups
+__pycache__
+*.pyc
+.env
+app/celerybeat-schedule*

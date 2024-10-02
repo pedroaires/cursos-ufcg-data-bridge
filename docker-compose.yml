@@ -21,7 +21,7 @@ services:
   celery_worker:
     build: .
     container_name: celery_worker
-    command: celery -A core.celery_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=1
+    command: celery -A core.celery_app worker --loglevel=info --concurrency=2
     env_file:
       - .env
     volumes:
