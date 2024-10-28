@@ -1,0 +1,2 @@
+CREATE DATABASE IF NOT EXISTS databridge_schema;
+CREATE DATABASE IF NOT EXISTS scheduler;
