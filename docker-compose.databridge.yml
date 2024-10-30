@@ -1,0 +1,55 @@
+services:
+  redis:
+    image: redis:6-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+  
+  db:
+    image: mysql:8.0
+    container_name: db
+    env_file:
+      - .env
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - "./init_db/init.sql:/docker-entrypoint-initdb.d/1.sql"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  
+  celery_worker:
+    image: pedroaires/cursos-ufcg-data-bridge:worker-latest
+    container_name: celery_worker
+    command: celery -A core.celery_app worker --loglevel=info --concurrency=1
+    env_file:
+      - .env
+    depends_on:
+      redis: 
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  celery_beat:
+    image: pedroaires/cursos-ufcg-data-bridge:beat-latest
+    container_name: celery_beat
+    command: celery -A core.celery_app beat --loglevel=info --scheduler=sqlalchemy_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - .env
+    depends_on:
+      redis: 
+        condition: service_started
+      db:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+
+volumes:
+  db_data:

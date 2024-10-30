@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   redis:
     image: redis:6-alpine
     container_name: redis
     ports:
       - "6379:6379"
-  
+
   db:
     image: mysql:8.0
     container_name: db
@@ -14,7 +16,7 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - "./scripts/init.sql:/docker-entrypoint-initdb.d/1.sql"
+      - "./init_db/init.sql:/docker-entrypoint-initdb.d/1.sql"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -24,7 +26,6 @@ services:
       timeout: 10s
       retries: 10
 
-  
   celery_worker:
     image: pedroaires/cursos-ufcg-data-bridge:worker-latest
     container_name: celery_worker
@@ -50,6 +51,41 @@ services:
         condition: service_healthy
       celery_worker:
         condition: service_started
+
+  backend:
+    image: pedroaires/cursos-ufcg-backend:latest
+    container_name: backend
+    environment:
+      DATABASE_URL: "mysql+pymysql://root:databridge@host.docker.internal:3307/databridge_schema"
+    expose:
+      - "5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  frontend:
+    image: pedroaires/cursos-ufcg-frontend:latest
+    container_name: frontend
+    environment:
+      BACKEND_URL: "/api/"
+    expose:
+      - "80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"  # Publicly expose NGINX on port 80
+    depends_on:
+      - frontend
+      - backend
 
 volumes:
   db_data:
