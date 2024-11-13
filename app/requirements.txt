@@ -12,3 +12,4 @@ PyMySQL==1.1.1
 cryptography==43.0.0
 tqdm==4.66.5
 tenacity==9.0.0
+sqlalchemy_celery_beat==0.8.0
