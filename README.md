@@ -6,65 +6,51 @@ Repositório dedicado ao sistema responsável por buscar e formatar dados para a
 - Redis (para o backend do Celery e cache)
 - MySQL (como banco de dados principal)
 - Celery (para processamento assíncrono de tarefas)
-- Python com SQLAlchemy e Pydantic
+- Python com SQLAlchemy
 
 ## Estrutura do Repositório
 - app/: Contém o código-fonte principal da aplicação, incluindo as definições do Celery e a lógica de integração com APIs externas.
 - core/: Contém a configuração de ambiente local e scripts principais para a execução do sistema.
-- scripts/: Scripts auxiliares, incluindo o orchestrator que organiza a execução de tarefas.
+- scripts/: Scripts auxiliares, incluindo o orchestrator que organiza a execução das tarefas de levantar as tabelas.
 
 ## Pré-requisitos
 - Docker e Docker Compose instalados na sua máquina.
-- Python 3.9+ (caso queira executar localmente sem Docker)
 
 ## Configuração
 ### Arquivo .env
 Certifique-se de criar um arquivo .env na raiz do projeto com as seguintes variáveis de ambiente para rodar o sistema no Docker:
-    ```
-    CELERY_BROKER_URL=redis://redis:6379/0
-    CELERY_RESULT_BACKEND=redis://redis:6379/0
-    ENVIRONMENT=development
-    SOURCE_API_USERNAME=[username para o sistema Eureca]
-    SOURCE_API_PASSWORD=[password para o sistema Eureca]
-    DATABASE_URL="mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE}"
-    PYTHONPATH=/app
-    MYSQL_ROOT_PASSWORD=[senha_do_user_do_db]
-    MYSQL_DATABASE=[user_do_db]
-    ```
 
-Além disso, se você deseja executar localmente sem o Docker, crie um arquivo .env no diretório core com o seguinte conteúdo:
-    ```
-    CELERY_BROKER_URL=redis://localhost:6379/0
-    CELERY_RESULT_BACKEND=redis://localhost:6379/0
-    ENVIRONMENT=development
-    SOURCE_API_USERNAME=[username para o sistema Eureca]
-    SOURCE_API_PASSWORD=[password para o sistema Eureca]
-    DATABASE_URL="mysql+pymysql://[user_do_db]:[senha_do_user]@localhost:3306/[esquema]"
-    ```
-
-## Como Rodar o Sistema
-
-### Utilizando Docker Compose
-1. Certifique-se de ter o Docker e Docker Compose instalados.
-2. Execute o seguinte comando para subir os containers:
 ```
-docker-compose up --build
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+ENVIRONMENT=production
+SOURCE_API_USERNAME=120210023
+SOURCE_API_PASSWORD=22091998
+MYSQL_ROOT_PASSWORD=databridge
+MYSQL_DATABASE=databridge_schema
+DATABASE_URL="mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE}"
+PYTHONPATH=/app
+SCHEDULER_DATABASE_URL="mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/scheduler"
+``` 
+
+### Arquivo de inicialização do Banco de dados
+Certifique-se de copiar a pasta init_db contendo o arquivo init.sql. Esse arquivo é responsável por criar os esquemas necessários para o funcionamento adequado do sistema.
+
+
+## Como Rodar o Sistema Databridge
+
+1. Certifique-se de ter o Docker e Docker Compose instalados.
+2. Execute o seguinte comando para subir os containers (lembre-se de copiar os arquivos .env e init_db/init.sql):
+```
+docker-compose up -f docker-compose.databridge.yml --build
 ```
 Isso inicializará o Redis, MySQL, o Celery Worker e o Celery Beat. A aplicação será acessível dentro dos containers criados pelo Docker.
 
-### Executando Localmente
-Para rodar o sistema localmente (sem Docker), siga os passos abaixo:
-
-1. Instale todas as dependências necessárias:
+3. Caso queira iniciar imediatamente a população do banco de dados, rode o seguinte comando:
 ```
-pip install -r requirements.txt
-
+docker-compose -f docker-compose.databridge.yml exec celery_worker celery -A core.celery_app call scripts.orchestrator.orchestrate_tasks
 ```
-2. Após a instalação, execute o sistema utilizando o seguinte comando:
-```
-python -m scripts.orchestrator
-```
-Este comando iniciará o celery_worker e iniciará o orchestrador responsável por organizar a execução de tarefas do Celery.
+Isso irá chamar a task pelo celery worker que iniciará o processo de popular o banco de dados.
 
 ## Estrutura do Docker Compose:
 O arquivo docker-compose.yml está configurado da seguinte maneira:
@@ -75,47 +61,33 @@ O arquivo docker-compose.yml está configurado da seguinte maneira:
 - celery_beat: Container que executa o Celery Beat para agendar tarefas periódicas.
 Os serviços são configurados para depender uns dos outros (Redis, MySQL) e são iniciados de acordo com as condições de saúde.
 
-## Tarefas no Celery
-- O Celery está configurado para processar múltiplas tarefas assíncronas usando Redis como broker e backend de resultados.
-- As tarefas são organizadas e coordenadas através do script orchestrator.
 
-## Considerações Finais
-O sistema DataBridge UFCG é projetado para coletar e processar dados dos cursos da UFCG de maneira automatizada, com execução paralela de tarefas e persistência de dados.
+## Como Rodar o Sistema Cursos UFCG Completo
+Além dos prérequisitos do sistema Databridge, é necessário também o arquivo de configuração do nginx para comunicação do backend e frontend. Para isso, copie o arquivo nginx.conf para a pasta com o arquivo docker-compose.cursos-ufcg.yml.
 
-## Como Rodar Todo o Sistema Cursos UFCG Usando Docker Compose
-Para rodar o sistema completo do Cursos UFCG utilizando o arquivo docker-compose-cursos-ufcg.yml, siga os passos abaixo:
-1. Pré-requisitos
-- Docker e Docker Compose devem estar instalados no seu ambiente.
-- Um arquivo .env na raiz do projeto com as seguintes variáveis de     ```
-    CELERY_BROKER_URL=redis://redis:6379/0
-    CELERY_RESULT_BACKEND=redis://redis:6379/0
-    ENVIRONMENT=development
-    SOURCE_API_USERNAME=[username para o sistema Eureca]
-    SOURCE_API_PASSWORD=[password para o sistema Eureca]
-    DATABASE_URL="mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE}"
-    PYTHONPATH=/app
-    MYSQL_ROOT_PASSWORD=[senha_do_user_do_db]
-    MYSQL_DATABASE=[user_do_db]
-    ```
-Este arquivo .env contém todas as variáveis de ambiente necessárias para a aplicação, como a configuração do Redis, MySQL e credenciais para o API.
-
-2. Executar o Sistema
-Com o Docker Compose configurado e o arquivo .env devidamente preenchido, siga estes passos:
-
-1. Certifique-se de que o arquivo docker-compose-cursos-ufcg.yml está disponível no diretório do projeto.
-2. Execute o seguinte comando para subir todos os containers e rodar o sistema:
+1. Certifique-se de ter o Docker e Docker Compose instalados.
+2. Arquivos necessários:
+    * .env: contendo variáveis ambientes
+    * init_db/init.sql para inicialização do banco de dados.
+    * nginx.conf para configuração do NGINX.
+3. Copie os arquivos necessários para o mesmo diretório onde está o arquivo docker-compose.cursos-ufcg.yml:
+4. Execute o comando para inicializar os containers:
 ```
-docker-compose -f docker-compose-cursos-ufcg.yml up --build
+docker-compose -f docker-compose.cursos-ufcg.yml up --build -d
 ```
-Esse comando irá levantar todos os serviços necessários para o funcionamento completo do sistema, incluindo:
+Esse comando irá:
+* Construir (se necessário) e iniciar todos os containers em segundo plano (-d).
+* Configurar o NGINX para redirecionar as requisições entre o backend e frontend.
 
-- Redis: Para cache e gerenciamento do Celery.
-- MySQL: Para o banco de dados principal.
-- Celery Worker: Para processamento assíncrono de tarefas.
-- Celery Beat: Para agendamento de tarefas periódicas.
-- Backend: A API para expor os dados processados.
-- Frontend: A interface de usuário para visualização dos dados.
+5. Iniciar população do banco de dados (opcional):
 
-3. Acessando o Sistema
-- Frontend: A interface pode ser acessada no navegador via http://localhost:3000.
-- Backend: A API estará disponível em http://localhost:5000.
+Se desejar popular o banco de dados imediatamente após a configuração, utilize o comando abaixo para chamar a task responsável:
+```
+docker-compose -f docker-compose.databridge.yml exec celery_worker celery -A core.celery_app call scripts.orchestrator.orchestrate_tasks
+```
+Esse comando irá acionar o Celery Worker, iniciando o processo de orquestração para popular o banco de dados automaticamente.
+
+4. Acessar a Aplicação
+
+* O frontend estará disponível na sua máquina local na porta 80.
+* Certifique-se de que sua rede permite acesso à porta 80 caso esteja utilizando uma máquina remota.
